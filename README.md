@@ -1,5 +1,5 @@
 LoL Random Champion Picker
-###########################
+==========================
 
 This application makes it possible to choose a random champion
 in ranked play, depending on how YOU want to play! The following
