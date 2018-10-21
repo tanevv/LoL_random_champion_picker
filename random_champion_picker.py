@@ -36,7 +36,7 @@ def get_champions_from_site(role):
     result = []
     # OP.GG classifies champions by tiers.
     appropriate_tiers = []
-    mode = input("How do you feel like playing?\n" +
+    mode = input("\nHow do you feel like playing?\n" +
                  "1) Tryhard\n" +
                  "2) Not too troll\n" +
                  "3) Feed my ass off\n" +
@@ -114,7 +114,7 @@ def get_unowned_champions(champions):
     for champion in champions:
         print("%d. %s" % (champion_id, champion))
         champion_id += 1
-    unowned_input = input("Format [x-y],z,..., where [x-y] is a range" +
+    unowned_input = input("Format [x-y],z,..., where [x-y] is a range " +
                           "and\nz is a single number next to " +
                           "a champion: ").split(',')
     indeces = construct_list(unowned_input)
@@ -123,25 +123,15 @@ def get_unowned_champions(champions):
     return res
 
 
-def write_in_configuration_file(config_file, section, option, value):
+def write_in_configuration_file():
     """
     Write given option and value in given section
     in configuration file. (Without clearing file)
 
     NOTE: Config (Instance of ConfigParser) is globally defined.
-
-    Args:
-        config_file (str)
-        section (str) - how in what section should the option/value pair be
-                        written
-        option (str)
-        value (str)
     """
-    cfgfile = open(config_file, 'a')
-    Config.add_section(section)
-    Config.set(section, option, json.dumps(value))
-    Config.write(cfgfile)
-    cfgfile.close()
+    with open(config_file, "w") as f:
+        Config.write(f)
 
 
 def modify_past_configuration(past_conf):
@@ -157,7 +147,7 @@ def modify_past_configuration(past_conf):
     for champion in past_conf:
         print(str(champion_id) + ". " + champion)
         champion_id += 1
-    new_champions_input = input("Format [x-y],z,..., where [x-y] is a" +
+    new_champions_input = input("Format [x-y],z,..., where [x-y] is a " +
                                 "range and\nz is a single number next " +
                                 "to a champion: ").split(',')
     indeces = construct_list(new_champions_input)
@@ -250,12 +240,10 @@ if __name__ == "__main__":
             os.utime(config_file, None)
 
     Config = configparser.ConfigParser()
-    Config.read(config_file)
-    sections = Config.sections()
 
     while True:
         # What does the user want to do?
-        function = input("Welcome to LoL random champion picker!" +
+        function = input("\nWelcome to LoL random champion picker! " +
                          "Please select what you want to do:\n" +
                          "1) Pick a random champion\n" +
                          "2) See stats about picked champions\n" +
@@ -266,7 +254,7 @@ if __name__ == "__main__":
             counter = 1
             role = ""
             while True:
-                role = input("Please type what role you're going to play:\n" +
+                role = input("\nPlease type what role you're playing:\n" +
                              "1) Top\n" +
                              "2) Jungle\n" +
                              "3) Mid\n" +
@@ -302,18 +290,17 @@ if __name__ == "__main__":
             # The following list is used later, when the user
             # has select his unowned champions.
             unowned_champions = []
-            # This boolean keeps track of whether or not something needs to be
-            # written in the configuration file.
-            write_in_role = False
 
             # This option is in a variable, so that it can be modified if
             # the user modifies the configuration. (option 4)
             first_option = "1) Use past configuration\n"
             # Has the user already given which champions he doesnt own?
+            Config.read(config_file)
+            sections = Config.sections()
             if (role in sections):
                 counter = 1
                 while True:
-                    ans = input("Detected past configuration of unowned" +
+                    ans = input("\nDetected past configuration of unowned " +
                                 "champions.\n" +
                                 first_option +
                                 "2) Reset configuration of role\n" +
@@ -331,17 +318,19 @@ if __name__ == "__main__":
                           or ans == "2" or ans == "2)"):
                         # Remove previous configuration.
                         Config.remove_section(role)
-                        with open(config_file, "w") as f:
-                            Config.write(f)
-
                         # Set up new one.
                         unowned_champions = get_unowned_champions(champions)
-                        write_in_role = True
+                        Config.add_section(role)
+                        Config.set(role,
+                                   "Unowned", json.dumps(unowned_champions))
+                        write_in_configuration_file()
                         break
 
                     elif (ans == "Show configuration"
                           or ans == "3" or ans == "3)"):
                         past_conf = json.loads(Config.get(role, "Unowned"))
+                        # Leave empty line to look better.
+                        print("\n")
                         for champion in past_conf:
                             print(champion)
                         continue
@@ -352,9 +341,8 @@ if __name__ == "__main__":
                         past_conf = json.loads(Config.get(role, "Unowned"))
                         modify_past_configuration(past_conf)
                         # Rewrite configuration file.
-                        with open(config_file, "w") as f:
-                            Config.set(role, "Unowned", json.dumps(past_conf))
-                            Config.write(f)
+                        Config.set(role, "Unowned", json.dumps(past_conf))
+                        write_in_configuration_file()
                         first_option = "1) Use new configuration\n"
                     # Exit program, if input is invalid 3 times in a row.
                     else:
@@ -365,15 +353,12 @@ if __name__ == "__main__":
             # If not, set up a fresh configuration.
             else:
                 unowned_champions = get_unowned_champions(champions)
-                write_in_role = True
+                Config.add_section(role)
+                Config.set(role, "Unowned", json.dumps(unowned_champions))
+                write_in_configuration_file()
 
             # Remove unowned champions from the pool of possible ones.
             champions = remove_unowned_champions(champions, unowned_champions)
-
-            # If a configuration for a role was reset earlier, write it in.
-            if write_in_role:
-                write_in_configuration_file(config_file, role,
-                                            "Unowned", unowned_champions)
 
             # Check if pool of available champions is empty.
             if not champions:
